@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from transformers import T5EncoderModel, ViTModel
+import wandb
 
 
 #images_dir = '/content/drive/MyDrive/RHF/pick_a_pic/richHF_images_w_captions/train/images'
@@ -18,10 +19,24 @@ metadata_dir = '/Users/luisa/RHF/RHF_parsed_dataset_with_captions/test'
 
 # Hyperparameters and setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-batch_size = 4
+batch_size = 1
 num_epochs = 1
-#learning_rate = 1e-4
-learning_rate = 0.1
+#base_learning_rate = 0.015
+base_learning_rate = 1
+
+wandb.init(
+    # set the wandb project where this run will be logged
+    project="rhf_test_project_0",
+
+    # track hyperparameters and run metadata
+    config={
+    "base_learning_rate": base_learning_rate,
+    "architecture": "heatmap_pred",
+    "dataset": "test",
+    "epochs": num_epochs,
+    "batch_size": batch_size
+    }
+)
 
 # Initialize model, loss, and optimizer
 heatmap_predictor = HeatmapPredictor()
@@ -32,7 +47,7 @@ t5_encoder = T5EncoderModel.from_pretrained('t5-base')  #  12 layers, 12 heads
 
 
 # Training Loop
-def train(model, t5_text_encoder, t5_encoder, vit_model, dataloader, criterion, optimizer, device):
+def train(model, t5_text_encoder, t5_encoder, vit_model, dataloader, criterion, optimizer, scheduler, device):
     model.train()
     t5_encoder.train()
     vit_model.train()
@@ -45,7 +60,7 @@ def train(model, t5_text_encoder, t5_encoder, vit_model, dataloader, criterion, 
     t5_text_encoder.to(device)
 
 
-    for images, texts, target_heatmaps in dataloader:
+    for iteration, (images, texts, target_heatmaps) in enumerate(dataloader, 1):  # start iteration count at 1
 
         optimizer.zero_grad()
 
@@ -88,6 +103,13 @@ def train(model, t5_text_encoder, t5_encoder, vit_model, dataloader, criterion, 
 
         loss.backward()
         optimizer.step()
+        lr_log = scheduler.get_last_lr()[0]
+        wandb.log({"loss": loss, "learning_rate":lr_log})
+        # Update the learning rate
+        scheduler.step()
+
+
+        print(f"Iteration {iteration}, Training Loss: {loss.item()}, Learning Rate: {lr_log}")
 
         print(f"Training Loss: {loss.item()}")
 
@@ -109,11 +131,24 @@ criterion = nn.MSELoss()  # Assuming target heatmaps are continuous values
 optimizer = optim.AdamW(list(heatmap_predictor.parameters()) +
                         list(t5_encoder.parameters()) +
                         list(vit_model.parameters()),
-                        lr=learning_rate)
+                        lr=base_learning_rate)
 
 #optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+
+# Learning rate scheduler
+def lr_lambda(current_step):
+    warmup_steps = 2000
+    if current_step < warmup_steps:
+        return current_step / warmup_steps  # Linear warm-up
+    return (warmup_steps / current_step) ** 0.5  # Reciprocal square root decay
+
+# LambdaLR scheduler
+scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
+
+
+#
 
 # Training Loop
 for epoch in range(num_epochs):
     print(f"Epoch {epoch+1}/{num_epochs}")
-    train(heatmap_predictor, t5_text_encoder, t5_encoder, vit_model, train_loader, criterion, optimizer, device)
+    train(heatmap_predictor, t5_text_encoder, t5_encoder, vit_model, train_loader, criterion, optimizer, scheduler, device)
