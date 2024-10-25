@@ -3,4 +3,4 @@
 .venv
 .DS_Store
 wandb
-testing.py
+checkpoints
