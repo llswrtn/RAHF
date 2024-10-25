@@ -24,6 +24,8 @@ METADATA_DIR = '/Users/luisa/RHF/RHF_parsed_dataset_with_captions/test'
 
 #CHECKPOINT_LOADPATH = os.path.join(checkpoint_dir, 'rhf_test_project_1/rahf_model_checkpoint_epoch0_iteration10.pth')
 CHECKPOINT_LOADPATH= None
+OUTPUT_DIR = ''
+
 WANDB_PROJECT_NAME = 'rhf-test-project-wandb-continue-1'
 WANDB_ENTITY = 'll_swrtn-heidelberg-university'
 
@@ -93,6 +95,7 @@ def main(args):
 
     images_dir = args.images_dir if args.images_dir else IMAGES_DIR
     metadata_dir = args.metadata_dir if args.metadata_dir else METADATA_DIR
+    output_dir = args.output_dir if args.output_dir else OUTPUT_DIR
 
     num_epochs = args.num_epochs if args.num_epochs else NUM_EPOCHS
     batch_size = args.batch_size if args.batch_size else BATCH_SIZE
@@ -133,8 +136,8 @@ def main(args):
 
 
     # Set paths for checkpoints
-    checkpoint_dir = './checkpoints'
-    checkpoint_savedir = os.path.join(checkpoint_dir, wandb_project_name)
+    checkpoint_dir = 'checkpoints'
+    checkpoint_savedir = os.path.join(output_dir, checkpoint_dir, wandb_project_name)
     os.makedirs(checkpoint_savedir, exist_ok=True)
 
     # Initialize model, loss, and optimizer
@@ -206,6 +209,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_project_name", type=str, help="name of Weights&Biases Project")
     parser.add_argument("--learning_rate", type=int, help="name of Weights&Biases Project")
     parser.add_argument("--test_run", action='store_true', help="run training with only 5 instances for debugging")
+    parser.add_argument("--output_dir", type=str, help="path to where to save output")
 
     args = parser.parse_args()
 
