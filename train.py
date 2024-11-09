@@ -104,6 +104,9 @@ def main(args):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+    if args.wandb_key:
+        wandb.login(key=args.wandb_key)
+
 
 
     if args.load:
@@ -210,6 +213,8 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=int, help="name of Weights&Biases Project")
     parser.add_argument("--test_run", action='store_true', help="run training with only 5 instances for debugging")
     parser.add_argument("--output_dir", type=str, help="path to where to save output")
+    parser.add_argument("--wandb_key", type=str, help="wandb api key")
+
 
     args = parser.parse_args()
 
