@@ -109,6 +109,7 @@ def main(args):
     wandb_project_name = args.wandb_project_name if args.wandb_project_name else WANDB_PROJECT_NAME
 
     num_nodes = args.num_nodes if args.num_nodes else 1
+    accumulate_grad_batches =  args.accumulate_grad_batches if args.accumulate_grad_batches else 1
     #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if args.wandb_key:
@@ -234,6 +235,7 @@ def main(args):
             accelerator="gpu",
             devices="auto",
             strategy="ddp",
+            accumulate_grad_batches=accumulate_grad_batches,
             num_nodes = num_nodes,
             log_every_n_steps=1,
             logger=wandb_logger,
@@ -285,6 +287,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_key", type=str, help="wandb api key")
     parser.add_argument("--num_nodes", type=int, help="number of nodes")
     parser.add_argument("--num_workers", type=int, help="number of workers for dataloader")
+    parser.add_argument("--accumulate_grad_batches", type=int, help="")
 
 
     args = parser.parse_args()
