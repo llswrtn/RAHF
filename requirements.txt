@@ -4,3 +4,4 @@ sentencepiece
 transformers
 pandas
 wandb
+lightning

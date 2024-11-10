@@ -1,14 +1,17 @@
 from RAHFHeatmapModel import RAHFHeatmapModel
 from heatmap_predictor import HeatmapPredictor
 from RHFDataset import RHFDataset
-from util import lr_lambda, save_checkpoint, load_checkpoint
+from util import lr_lambda
+#from util import lr_lambda, save_checkpoint, load_checkpoint
 
 import argparse
 import datetime
 import os
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import DataLoader
 from transformers import T5EncoderModel, ViTModel
 import wandb
@@ -35,16 +38,16 @@ NUM_EPOCHS = 1 #total number of epochs to train, including start_epoch count
 BASE_LEARNING_RATE = 0.015
 #BASE_LEARNING_RATE = 1
 
-
+'''
 def train(rahf_model, dataloader, criterion, optimizer, scheduler, device, start_epoch, num_epochs, start_iteration, wandb_run, checkpoint_savedir):
 
     rahf_model.to(device)
-    ''' 
-    heatmap_predictor.to(device)
-    t5_encoder.to(device)
-    vit_model.to(device)
-    t5_text_encoder.to(device)   
-    '''
+    
+    #heatmap_predictor.to(device)
+    #t5_encoder.to(device)
+    #vit_model.to(device)
+    #t5_text_encoder.to(device)   
+    
     iteration = start_iteration  # Start from the loaded iteration
     for epoch in range(start_epoch, num_epochs):
         print(f"Epoch {epoch}/{num_epochs-1}")
@@ -89,6 +92,7 @@ def train(rahf_model, dataloader, criterion, optimizer, scheduler, device, start
 
         # Save checkpoint at the end of each epoch
         save_checkpoint(epoch, iteration, rahf_model, optimizer, scheduler, checkpoint_savepath)
+'''
 
 def main(args):
     # SETUP
@@ -102,7 +106,7 @@ def main(args):
     base_learning_rate = args.learning_rate if args.learning_rate else BASE_LEARNING_RATE
     wandb_project_name = args.wandb_project_name if args.wandb_project_name else WANDB_PROJECT_NAME
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if args.wandb_key:
         wandb.login(key=args.wandb_key)
@@ -116,17 +120,22 @@ def main(args):
 
         wandb_run_id = os.path.basename(args.load).split('_')[1]
         wandb_project_name = args.load.split('/')[-2]
-        wandb_run = wandb.init(entity= WANDB_ENTITY, project=wandb_project_name, id=wandb_run_id, resume="must")
-
+        #wandb_run = wandb.init(entity= WANDB_ENTITY, project=wandb_project_name, id=wandb_run_id, resume="must")
+        print('project name ', wandb_project_name)
+        print('run id ', wandb_run_id)
+        wandb_logger = WandbLogger(
+            project=wandb_project_name,
+            id=wandb_run_id,
+            resume="must"
+        )
 
 
     else:
         # start training from scratch
         checkpoint_loadpath = None
-        wandb_run = wandb.init(
-            # set the wandb project where this run will be logged
-            project= wandb_project_name,
-
+        wandb_logger = WandbLogger(
+            project=wandb_project_name
+,
             # track hyperparameters and run metadata
             config={
             "base_learning_rate": base_learning_rate,
@@ -155,7 +164,17 @@ def main(args):
     t5_text_encoder.eval()  # keep frozen? would that prevent catastrophic forgetting?
     # t5_text_encoder.train()
 
-    rahf_model = RAHFHeatmapModel(heatmap_predictor, t5_text_encoder, t5_encoder, vit_model)
+    # Initialize criterion and optimizer
+    criterion = nn.MSELoss()
+
+
+    rahf_model = RAHFHeatmapModel(heatmap_predictor=heatmap_predictor,
+                                  t5_text_encoder=t5_text_encoder,
+                                  t5_encoder=t5_encoder,
+                                  vit_model=vit_model,
+                                  criterion=criterion,
+                                  base_learning_rate=base_learning_rate,
+                                  scheduler_lambda = lr_lambda )
 
 
     # Load your dataset
@@ -169,7 +188,7 @@ def main(args):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
 
-    criterion = nn.MSELoss()  # Assuming target heatmaps are continuous values
+
 
     ''' 
     optimizer = optim.AdamW(list(heatmap_predictor.parameters()) +
@@ -177,11 +196,11 @@ def main(args):
                             list(vit_model.parameters()),
                             lr=base_learning_rate)
     '''
-
-    optimizer = optim.AdamW(rahf_model.parameters(), lr=base_learning_rate)
+    #optimizer = optim.AdamW(rahf_model.parameters(), lr=base_learning_rate)
     # LambdaLR scheduler
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
+    #scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
 
+    '''
     # Load checkpoint if available, otherwise start from scratch
     start_epoch, start_iteration = load_checkpoint(rahf_model, optimizer, scheduler, checkpoint_loadpath)
     # if loaded from checkpoint, start training at next epoch, not the one we stopped at
@@ -190,6 +209,52 @@ def main(args):
         print(f"Checkpoint loaded: starting from epoch {start_epoch}, iteration {start_iteration}.")
 
     train(rahf_model, train_loader, criterion, optimizer, scheduler, device, start_epoch, num_epochs, start_iteration, wandb_run, checkpoint_savedir)
+    '''
+    #wandb_run_id = wandb_run.id
+    wandb_run_id = wandb_logger.experiment.id
+    date_time_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=checkpoint_savedir,
+        filename=f"rahf-model-checkpoint-run_{wandb_run_id}_{{epoch:02d}}_{{step}}_{date_time_str}",
+        save_top_k=-1,  # Set to -1 to save all checkpoints if needed
+        save_on_train_epoch_end=True,  # Saves at the end of every epoch
+        monitor="train_loss",
+        mode="min",
+        #every_n_train_steps=500,  # Additionally save every 500 steps (if needed)
+    )
+
+    if torch.cuda.is_available() and torch.cuda.device_count() > 1:
+        trainer = pl.Trainer(
+            max_epochs=num_epochs,
+            default_root_dir=checkpoint_savedir,
+            accelerator="gpu",
+            devices="auto",
+            strategy="ddp",
+            log_every_n_steps=1,
+            logger=wandb_logger,
+            callbacks=[checkpoint_callback]
+        )
+    else:
+        trainer = pl.Trainer(
+            max_epochs=num_epochs,
+            default_root_dir=checkpoint_savedir,
+            accelerator="gpu" if torch.cuda.is_available() else "cpu",
+            devices="auto",
+            log_every_n_steps=1,
+            logger=wandb_logger,
+            callbacks=[checkpoint_callback]
+        )
+
+    # Start training
+    #trainer.fit(rahf_model, train_loader)
+
+    if args.load:
+        trainer.fit(rahf_model, train_loader, ckpt_path=checkpoint_loadpath)
+    else:
+        trainer.fit(rahf_model, train_loader)
+
+
 
 
 if __name__ == "__main__":

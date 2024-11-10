@@ -1,15 +1,20 @@
+import pytorch_lightning as pl
 import torch
-import torch.nn as nn
+import torch.optim as optim
 
 
-class RAHFHeatmapModel(nn.Module):
-    def __init__(self, heatmap_predictor, t5_text_encoder, t5_encoder, vit_model, heatmap_size=224):
+class RAHFHeatmapModel(pl.LightningModule):
+    def __init__(self, heatmap_predictor, t5_text_encoder, t5_encoder, vit_model,  criterion, base_learning_rate, scheduler_lambda, heatmap_size=224):
         super(RAHFHeatmapModel, self).__init__()
 
         self.heatmap_predictor = heatmap_predictor
         self.t5_text_encoder = t5_text_encoder
         self.t5_encoder = t5_encoder
         self.vit_model = vit_model
+
+        self.criterion = criterion
+        self.base_learning_rate = base_learning_rate
+        self.scheduler_lambda = scheduler_lambda
 
         self.heatmap_size = heatmap_size
 
@@ -44,3 +49,20 @@ class RAHFHeatmapModel(nn.Module):
 
 
         return predicted_heatmap
+
+    def training_step(self, batch, batch_idx):
+        images, texts, target_heatmaps = batch
+        predicted_heatmap = self(images, texts)
+        loss = self.criterion(predicted_heatmap, target_heatmaps)
+
+        # Log loss and learning rate to WandB
+        lr = self.lr_schedulers().get_last_lr()[0]
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("learning_rate", lr, on_step=True, on_epoch=True)
+
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = optim.AdamW(self.parameters(), lr=self.base_learning_rate)
+        scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=self.scheduler_lambda)
+        return [optimizer], [scheduler]

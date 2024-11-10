@@ -4,12 +4,12 @@ import torch
 # Function to save the model checkpoint
 # Learning rate scheduler
 def lr_lambda(current_step):
-    #warmup_steps = 2   # for debugging
-    warmup_steps = 2000
+    warmup_steps = 2   # for debugging
+    #warmup_steps = 2000
     if current_step < warmup_steps:
         return current_step / warmup_steps  # Linear warm-up
     return (warmup_steps / current_step) ** 0.5  # Reciprocal square root decay
-
+'''
 def save_checkpoint(epoch, iteration, model, optimizer, scheduler, path):
     checkpoint = {
         'epoch': epoch,
@@ -34,3 +34,4 @@ def load_checkpoint(model, optimizer, scheduler, path):
     else:
         print(f"No checkpoint found at {path}. Starting from scratch.")
         return 0, 0
+'''
