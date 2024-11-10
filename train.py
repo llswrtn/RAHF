@@ -234,7 +234,7 @@ def main(args):
             default_root_dir=checkpoint_savedir,
             accelerator="gpu",
             devices="auto",
-            strategy="ddp",
+            strategy="ddp_find_unused_parameters_true",
             accumulate_grad_batches=accumulate_grad_batches,
             num_nodes = num_nodes,
             log_every_n_steps=1,
