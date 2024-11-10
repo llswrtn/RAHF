@@ -33,6 +33,7 @@ WANDB_PROJECT_NAME = 'rhf-test-project-wandb-continue-1'
 WANDB_ENTITY = 'll_swrtn-heidelberg-university'
 
 # HYPERPARAMETERS
+NUM_WORKERS = 4
 BATCH_SIZE = 1
 NUM_EPOCHS = 1 #total number of epochs to train, including start_epoch count
 BASE_LEARNING_RATE = 0.015
@@ -103,9 +104,11 @@ def main(args):
 
     num_epochs = args.num_epochs if args.num_epochs else NUM_EPOCHS
     batch_size = args.batch_size if args.batch_size else BATCH_SIZE
+    num_workers = args.num_workers if args.num_workers else NUM_WORKERS
     base_learning_rate = args.learning_rate if args.learning_rate else BASE_LEARNING_RATE
     wandb_project_name = args.wandb_project_name if args.wandb_project_name else WANDB_PROJECT_NAME
 
+    num_nodes = args.num_nodes if args.num_nodes else 1
     #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if args.wandb_key:
@@ -185,7 +188,7 @@ def main(args):
         subset_indices = list(range(5))  # Indices of the first 10 samples
         train_dataset = torch.utils.data.Subset(train_dataset, subset_indices)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
 
 
@@ -231,6 +234,7 @@ def main(args):
             accelerator="gpu",
             devices="auto",
             strategy="ddp",
+            num_nodes = num_nodes,
             log_every_n_steps=1,
             logger=wandb_logger,
             callbacks=[checkpoint_callback]
@@ -279,6 +283,8 @@ if __name__ == "__main__":
     parser.add_argument("--test_run", action='store_true', help="run training with only 5 instances for debugging")
     parser.add_argument("--output_dir", type=str, help="path to where to save output")
     parser.add_argument("--wandb_key", type=str, help="wandb api key")
+    parser.add_argument("--num_nodes", type=int, help="number of nodes")
+    parser.add_argument("--num_workers", type=int, help="number of workers for dataloader")
 
 
     args = parser.parse_args()
