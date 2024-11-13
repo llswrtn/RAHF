@@ -1,8 +1,7 @@
 from RAHFHeatmapModel import RAHFHeatmapModel
 from heatmap_predictor import HeatmapPredictor
 from RHFDataset import RHFDataset
-from util import lr_lambda
-#from util import lr_lambda, save_checkpoint, load_checkpoint
+
 
 import argparse
 import datetime
@@ -116,6 +115,13 @@ def main(args):
     # Initialize criterion and optimizer
     criterion = nn.MSELoss()
 
+    # Learning rate scheduler
+    def lr_lambda(current_step):
+        # warmup_steps = 2   # for debugging
+        warmup_steps = 2000
+        if current_step < warmup_steps:
+            return current_step / warmup_steps  # Linear warm-up
+        return (warmup_steps / current_step) ** 0.5  # Reciprocal square root decay
 
     rahf_model = RAHFHeatmapModel(heatmap_predictor=heatmap_predictor,
                                   t5_text_encoder=t5_text_encoder,
