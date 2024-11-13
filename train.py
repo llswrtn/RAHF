@@ -116,12 +116,15 @@ def main(args):
     criterion = nn.MSELoss()
 
     # Learning rate scheduler
-    def lr_lambda(current_step):
+
+    num_devices = torch.cuda.device_count() if torch.cuda.is_available() else 1
+
+    def lr_lambda(current_step, num_devices=num_devices):
         # warmup_steps = 2   # for debugging
         warmup_steps = 2000
         if current_step < warmup_steps:
-            return current_step / warmup_steps  # Linear warm-up
-        return (warmup_steps / current_step) ** 0.5  # Reciprocal square root decay
+            return current_step / warmup_steps * num_devices  # Linear warm-up
+        return (warmup_steps / current_step) ** 0.5 * num_devices  # Reciprocal square root decay
 
     rahf_model = RAHFHeatmapModel(heatmap_predictor=heatmap_predictor,
                                   t5_text_encoder=t5_text_encoder,
@@ -133,7 +136,7 @@ def main(args):
 
 
     # Load your dataset
-    train_dataset = RHFDataset(images_dir, metadata_dir)
+    train_dataset = RHFDataset(images_dir, metadata_dir, train=True)
 
     # FOR DEBUGGING ONLY
     if args.test_run:
@@ -185,7 +188,6 @@ def main(args):
         )
 
     # Start training
-    #trainer.fit(rahf_model, train_loader)
 
     if args.load:
         trainer.fit(rahf_model, train_loader, ckpt_path=checkpoint_loadpath)
