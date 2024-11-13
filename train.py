@@ -189,7 +189,7 @@ def main(args):
         subset_indices = list(range(5))  # Indices of the first 10 samples
         train_dataset = torch.utils.data.Subset(train_dataset, subset_indices)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
 
 
@@ -229,6 +229,7 @@ def main(args):
     )
 
     if torch.cuda.is_available() and torch.cuda.device_count() > 1:
+        print("cuda.device_count: ", torch.cuda.device_count())
         trainer = pl.Trainer(
             max_epochs=num_epochs,
             default_root_dir=checkpoint_savedir,
