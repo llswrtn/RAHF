@@ -39,61 +39,6 @@ NUM_EPOCHS = 1 #total number of epochs to train, including start_epoch count
 BASE_LEARNING_RATE = 0.015
 #BASE_LEARNING_RATE = 1
 
-'''
-def train(rahf_model, dataloader, criterion, optimizer, scheduler, device, start_epoch, num_epochs, start_iteration, wandb_run, checkpoint_savedir):
-
-    rahf_model.to(device)
-    
-    #heatmap_predictor.to(device)
-    #t5_encoder.to(device)
-    #vit_model.to(device)
-    #t5_text_encoder.to(device)   
-    
-    iteration = start_iteration  # Start from the loaded iteration
-    for epoch in range(start_epoch, num_epochs):
-        print(f"Epoch {epoch}/{num_epochs-1}")
-
-
-        for images, texts, target_heatmaps in dataloader:  # start iteration count at 1
-
-            optimizer.zero_grad()
-
-            images = images.to(device)  # Shape: (batch_size, 3, 224, 224)
-            texts = texts.to(device)    # Shape: (batch_size, seq_len)
-            target_heatmaps = target_heatmaps.to(device)  # Shape: (batch_size, 1, 224, 224)
-
-            # Step 1 to 6: Heatmap Prediction
-            predicted_heatmap= rahf_model(images, texts)
-
-            # Step 7: Compute Loss
-            loss = criterion(predicted_heatmap, target_heatmaps)
-
-            # Step 8: Backpropagation and optimization
-            loss.backward()
-            optimizer.step()
-            lr_log = scheduler.get_last_lr()[0]
-            #wandb.log({"loss": loss, "learning_rate":lr_log})
-            # Update the learning rate
-            scheduler.step()
-
-            # Log metrics to Weights & Biases in real-time
-            wandb.log({
-                "epoch": epoch,
-                "train_loss": loss.item(),
-                "learning_rate": scheduler.get_last_lr()[0]
-            })
-
-            print(f"Iteration {iteration}, Training Loss: {loss.item()}, Learning Rate: {lr_log}")
-            iteration += 1
-
-        wandb_run_id = wandb_run.id
-        d = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        checkpoint_savename = 'rahf-model-checkpoint-run_' + wandb_run_id + '_epoch'+ str(epoch) + '_iteration' + str(iteration) + "_" + d + '.pth'
-        checkpoint_savepath = os.path.join(checkpoint_savedir, checkpoint_savename)
-
-        # Save checkpoint at the end of each epoch
-        save_checkpoint(epoch, iteration, rahf_model, optimizer, scheduler, checkpoint_savepath)
-'''
 
 def main(args):
     # SETUP
@@ -193,27 +138,6 @@ def main(args):
 
 
 
-
-    ''' 
-    optimizer = optim.AdamW(list(heatmap_predictor.parameters()) +
-                            list(t5_encoder.parameters()) +
-                            list(vit_model.parameters()),
-                            lr=base_learning_rate)
-    '''
-    #optimizer = optim.AdamW(rahf_model.parameters(), lr=base_learning_rate)
-    # LambdaLR scheduler
-    #scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
-
-    '''
-    # Load checkpoint if available, otherwise start from scratch
-    start_epoch, start_iteration = load_checkpoint(rahf_model, optimizer, scheduler, checkpoint_loadpath)
-    # if loaded from checkpoint, start training at next epoch, not the one we stopped at
-    if args.load:
-        start_epoch += 1
-        print(f"Checkpoint loaded: starting from epoch {start_epoch}, iteration {start_iteration}.")
-
-    train(rahf_model, train_loader, criterion, optimizer, scheduler, device, start_epoch, num_epochs, start_iteration, wandb_run, checkpoint_savedir)
-    '''
     #wandb_run_id = wandb_run.id
     wandb_run_id = wandb_logger.experiment.id
     date_time_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -248,6 +172,7 @@ def main(args):
             default_root_dir=checkpoint_savedir,
             accelerator="gpu" if torch.cuda.is_available() else "cpu",
             devices="auto",
+            accumulate_grad_batches=accumulate_grad_batches,
             log_every_n_steps=1,
             logger=wandb_logger,
             callbacks=[checkpoint_callback]
@@ -288,7 +213,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_key", type=str, help="wandb api key")
     parser.add_argument("--num_nodes", type=int, help="number of nodes")
     parser.add_argument("--num_workers", type=int, help="number of workers for dataloader")
-    parser.add_argument("--accumulate_grad_batches", type=int, help="")
+    parser.add_argument("--accumulate_grad_batches", type=int, help="number of grad accumulation steps")
 
 
     args = parser.parse_args()
