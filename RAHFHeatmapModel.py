@@ -65,4 +65,4 @@ class RAHFHeatmapModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.parameters(), lr=self.base_learning_rate)
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=self.scheduler_lambda)
-        return [optimizer], [scheduler]
+        return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
