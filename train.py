@@ -117,16 +117,14 @@ def main(args):
 
     # Learning rate scheduler
 
-    num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 1
-    num_nodes = args.num_nodes if args.num_nodes else 1
+    num_devices = torch.cuda.device_count() if torch.cuda.is_available() else 1
 
-    def lr_lambda(current_step, num_gpus=num_gpus, num_nodes = num_nodes):
+    def lr_lambda(current_step, num_devices=num_devices):
         # warmup_steps = 2   # for debugging
         warmup_steps = 2000
-        total_devices = num_gpus * num_nodes
         if current_step < warmup_steps:
-            return current_step / warmup_steps * total_devices  # Linear warm-up
-        return (warmup_steps / current_step) ** 0.5 * total_devices  # Reciprocal square root decay
+            return current_step / warmup_steps * num_devices  # Linear warm-up
+        return (warmup_steps / current_step) ** 0.5 * num_devices  # Reciprocal square root decay
 
     rahf_model = RAHFHeatmapModel(heatmap_predictor=heatmap_predictor,
                                   t5_text_encoder=t5_text_encoder,
@@ -170,7 +168,7 @@ def main(args):
             default_root_dir=checkpoint_savedir,
             accelerator="gpu",
             devices="auto",
-            strategy="ddp_find_unused_parameters_true", #strategy="ddp" if num_nodes > 1 else "ddp_find_unused_parameters_true",  # DDP strategy for multi-node
+            strategy="ddp_find_unused_parameters_true",
             accumulate_grad_batches=accumulate_grad_batches,
             num_nodes = num_nodes,
             log_every_n_steps=1,
