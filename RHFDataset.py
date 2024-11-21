@@ -74,6 +74,7 @@ class RHFDataset(Dataset):
     def __getitem__(self, idx):
 
         img_path = os.path.join(self.imgs_dir, self.images[idx]+ '.png')
+        original_img_name = self.images[idx]
         #image = read_image(img_path)
         #resize_img = T.Resize(size = (224,224)) # images are 512x512 up to  768x768, target heatmaps 512x512 (!)
         #image = resize_img(image)
@@ -85,7 +86,7 @@ class RHFDataset(Dataset):
 
 
         target_heatmap = self.target_heatmaps[idx]
-        target_heatmap = target_heatmap.squeeze(-1)
+        target_heatmap = (target_heatmap / 255).squeeze(-1) # normalize target to values between 0 and 1
         target_heatmap = torch.from_numpy(target_heatmap)
         target_heatmap = target_heatmap.unsqueeze(0)
 
@@ -110,4 +111,4 @@ class RHFDataset(Dataset):
 
         text_inputs = self.tokenized_captions[idx]
 
-        return image, text_inputs, target_heatmap
+        return image, text_inputs, target_heatmap, original_img_name

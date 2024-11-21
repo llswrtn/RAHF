@@ -51,7 +51,7 @@ class RAHFHeatmapModel(pl.LightningModule):
         return predicted_heatmap
 
     def training_step(self, batch, batch_idx):
-        images, texts, target_heatmaps = batch
+        images, texts, target_heatmaps, original_names = batch
         predicted_heatmap = self(images, texts)
         loss = self.criterion(predicted_heatmap, target_heatmaps)
 
