@@ -106,7 +106,9 @@ class RHFDataset(Dataset):
         if random.random() < 0.1  and self.train:
             image = T.Grayscale(num_output_channels=3)(image)
 
-        image = self.feature_extractor(images= read_image(img_path), return_tensors="pt")
+        #image = self.feature_extractor(images= read_image(img_path), return_tensors="pt")
+
+        image = self.feature_extractor(images= image, return_tensors="pt")
         image = image['pixel_values'].squeeze(0)
 
         text_inputs = self.tokenized_captions[idx]
