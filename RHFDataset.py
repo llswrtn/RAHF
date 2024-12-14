@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
@@ -82,22 +83,20 @@ class RHFDataset(Dataset):
         image = Image.open(img_path).convert("RGB")  # Use PIL for augmentation compatibility
 
 
-
-
-
         target_heatmap = self.target_heatmaps[idx]
         target_heatmap = (target_heatmap / 255).squeeze(-1) # normalize target to values between 0 and 1
         target_heatmap = torch.from_numpy(target_heatmap)
         target_heatmap = target_heatmap.unsqueeze(0)
-
-        if random.random() < 0.5 and self.train:
-            image, target_heatmap = self.random_crop(image, target_heatmap)
 
         # Resize both image and heatmap to 224x224
         resize_img = T.Resize(size = (224,224)) # images are 512x512 up to  768x768, target heatmaps 512x512 (!)
         image = resize_img(image)
         resize_heatmap = T.Resize(size = (224,224), interpolation=InterpolationMode.NEAREST)
         target_heatmap = resize_heatmap(target_heatmap)
+
+
+        if random.random() < 0.5 and self.train:
+            image, target_heatmap = self.random_crop(image, target_heatmap)
 
         # 10% chance to apply random augmentations
         if random.random() < 0.1  and self.train:
