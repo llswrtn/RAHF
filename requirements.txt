@@ -7,3 +7,4 @@ wandb
 lightning
 pysaliency
 scikit-learn
+matplotlib
